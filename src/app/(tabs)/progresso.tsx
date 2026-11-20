@@ -4,8 +4,8 @@ const DIAS_DO_MES = 30; // novembro tem 30 dias
 
 // Cores de exemplo; depois vão depender dos hábitos realmente feitos
 function corDoDia(dia: number) {
-  if (dia % 3 === 0) return '#6C5CE7';
-  if (dia % 2 === 0) return '#C9C3F5';
+  if (dia % 3 === 0) return '#E84393';
+  if (dia % 2 === 0) return '#FDEAF3';
   return '#EEEEEE';
 }
 

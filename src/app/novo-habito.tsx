@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   botao: {
-    backgroundColor: '#6C5CE7',
+    backgroundColor: '#E84393',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
