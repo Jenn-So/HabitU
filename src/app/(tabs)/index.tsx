@@ -1,23 +1,40 @@
+import { useCallback, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-
-const HABITOS_EXEMPLO = [
-  { id: '1', nome: 'Estudar 1 hora', feito: true },
-  { id: '2', nome: 'Beber 2 litros de água', feito: false },
-  { id: '3', nome: 'Revisar a matéria do dia', feito: false },
-];
+import { useRouter, useFocusEffect } from 'expo-router';
+import { carregarHabitos } from '../../armazenamento';
+import type { Habito } from '../../tipos';
 
 export default function HojeScreen() {
   const router = useRouter();
 
+  // Estado: a lista de hábitos que aparece na tela. Começa vazia.
+  const [habitos, setHabitos] = useState<Habito[]>([]);
+
+  // Roda toda vez que a tela Hoje fica em foco (ao abrir e ao voltar do modal).
+  useFocusEffect(
+    useCallback(() => {
+      async function carregar() {
+        const lista = await carregarHabitos();
+        setHabitos(lista); // atualiza o estado e a tela se redesenha
+      }
+      carregar();
+    }, [])
+  );
+
   return (
     <View style={styles.container}>
       <FlatList
-        data={HABITOS_EXEMPLO}
+        data={habitos}
         keyExtractor={(item) => item.id}
+        // Mensagem exibida quando ainda não há nenhum hábito.
+        ListEmptyComponent={
+          <Text style={styles.vazio}>
+            Nenhum hábito ainda. Toque em "+ Novo hábito" para começar.
+          </Text>
+        }
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.check}>{item.feito ? '✅' : '⬜'}</Text>
+            <Text style={styles.check}>⬜</Text>
             <Text style={styles.nome}>{item.nome}</Text>
             <Text style={styles.lixeira}>🗑️</Text>
           </View>
@@ -32,6 +49,7 @@ export default function HojeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#fff' },
+  vazio: { fontSize: 16, color: '#666', textAlign: 'center', marginTop: 32 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
