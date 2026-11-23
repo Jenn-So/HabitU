@@ -1,32 +1,54 @@
 import { useCallback, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { carregarHabitos } from '../../armazenamento';
-import type { Habito } from '../../tipos';
+import {
+  carregarHabitos,
+  carregarConclusoes,
+  salvarConclusoes,
+} from '../../armazenamento';
+import { dataDeHoje } from '../../datas';
+import type { Habito, Conclusoes } from '../../tipos';
 
 export default function HojeScreen() {
   const router = useRouter();
 
-  // Estado: a lista de hábitos que aparece na tela. Começa vazia.
+  // Estados: a lista de hábitos e os dias/hábitos já concluídos.
   const [habitos, setHabitos] = useState<Habito[]>([]);
+  const [conclusoes, setConclusoes] = useState<Conclusoes>({});
 
-  // Roda toda vez que a tela Hoje fica em foco (ao abrir e ao voltar do modal).
+  // Ids dos hábitos feitos hoje (lista vazia se ainda não há nenhum).
+  const hoje = dataDeHoje();
+  const feitosHoje = conclusoes[hoje] ?? [];
+
+  // Roda toda vez que a tela Hoje fica em foco.
   useFocusEffect(
     useCallback(() => {
       async function carregar() {
-        const lista = await carregarHabitos();
-        setHabitos(lista); // atualiza o estado e a tela se redesenha
+        setHabitos(await carregarHabitos());
+        setConclusoes(await carregarConclusoes());
       }
       carregar();
     }, [])
   );
 
+  // Marca o hábito como feito hoje, ou desmarca se já estava feito.
+  async function alternar(idHabito: string) {
+    const jaFeito = feitosHoje.includes(idHabito);
+    const novosFeitos = jaFeito
+      ? feitosHoje.filter((id) => id !== idHabito)
+      : [...feitosHoje, idHabito];
+
+    const novasConclusoes = { ...conclusoes, [hoje]: novosFeitos };
+    setConclusoes(novasConclusoes); // atualiza a tela na hora
+    await salvarConclusoes(novasConclusoes); // guarda no celular
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
         data={habitos}
+        extraData={conclusoes} // avisa a lista para redesenhar quando isso mudar
         keyExtractor={(item) => item.id}
-        // Mensagem exibida quando ainda não há nenhum hábito.
         ListEmptyComponent={
           <Text style={styles.vazio}>
             Nenhum hábito ainda. Toque em "+ Novo hábito" para começar.
@@ -34,7 +56,11 @@ export default function HojeScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.check}>⬜</Text>
+            <Pressable onPress={() => alternar(item.id)} hitSlop={10}>
+              <Text style={styles.check}>
+                {feitosHoje.includes(item.id) ? '✅' : '⬜'}
+              </Text>
+            </Pressable>
             <Text style={styles.nome}>{item.nome}</Text>
             <Text style={styles.lixeira}>🗑️</Text>
           </View>
