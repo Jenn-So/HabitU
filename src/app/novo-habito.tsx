@@ -28,9 +28,6 @@ export default function NovoHabitoScreen() {
     const novaLista = [...habitos, novoHabito];
     await salvarHabitos(novaLista);
 
-    // TEMPORÁRIO: mostra a lista no terminal para conferirmos. Sai no Passo 4.
-    console.log('Hábitos salvos:', novaLista);
-
     // 6. Voltar para a tela anterior.
     router.back();
   }
