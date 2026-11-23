@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Pressable, Alert, StyleSheet } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import {
   carregarHabitos,
+  salvarHabitos,
   carregarConclusoes,
   salvarConclusoes,
 } from '../../armazenamento';
@@ -12,15 +13,12 @@ import type { Habito, Conclusoes } from '../../tipos';
 export default function HojeScreen() {
   const router = useRouter();
 
-  // Estados: a lista de hábitos e os dias/hábitos já concluídos.
   const [habitos, setHabitos] = useState<Habito[]>([]);
   const [conclusoes, setConclusoes] = useState<Conclusoes>({});
 
-  // Ids dos hábitos feitos hoje (lista vazia se ainda não há nenhum).
   const hoje = dataDeHoje();
   const feitosHoje = conclusoes[hoje] ?? [];
 
-  // Roda toda vez que a tela Hoje fica em foco.
   useFocusEffect(
     useCallback(() => {
       async function carregar() {
@@ -31,7 +29,6 @@ export default function HojeScreen() {
     }, [])
   );
 
-  // Marca o hábito como feito hoje, ou desmarca se já estava feito.
   async function alternar(idHabito: string) {
     const jaFeito = feitosHoje.includes(idHabito);
     const novosFeitos = jaFeito
@@ -39,15 +36,40 @@ export default function HojeScreen() {
       : [...feitosHoje, idHabito];
 
     const novasConclusoes = { ...conclusoes, [hoje]: novosFeitos };
-    setConclusoes(novasConclusoes); // atualiza a tela na hora
-    await salvarConclusoes(novasConclusoes); // guarda no celular
+    setConclusoes(novasConclusoes);
+    await salvarConclusoes(novasConclusoes);
+  }
+
+  // Apaga o hábito de verdade (só é chamada depois da confirmação).
+  async function excluir(idHabito: string) {
+    // Lista nova sem o hábito excluído.
+    const novaLista = habitos.filter((h) => h.id !== idHabito);
+
+    // Tira o id desse hábito de todos os dias já registrados.
+    const novasConclusoes: Conclusoes = {};
+    for (const dia in conclusoes) {
+      novasConclusoes[dia] = conclusoes[dia].filter((id) => id !== idHabito);
+    }
+
+    setHabitos(novaLista);
+    setConclusoes(novasConclusoes);
+    await salvarHabitos(novaLista);
+    await salvarConclusoes(novasConclusoes);
+  }
+
+  // Mostra a caixinha de confirmação antes de excluir.
+  function confirmarExclusao(habito: Habito) {
+    Alert.alert('Excluir hábito', `Deseja excluir "${habito.nome}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Excluir', style: 'destructive', onPress: () => excluir(habito.id) },
+    ]);
   }
 
   return (
     <View style={styles.container}>
       <FlatList
         data={habitos}
-        extraData={conclusoes} // avisa a lista para redesenhar quando isso mudar
+        extraData={conclusoes}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
           <Text style={styles.vazio}>
@@ -62,7 +84,9 @@ export default function HojeScreen() {
               </Text>
             </Pressable>
             <Text style={styles.nome}>{item.nome}</Text>
-            <Text style={styles.lixeira}>🗑️</Text>
+            <Pressable onPress={() => confirmarExclusao(item)} hitSlop={10}>
+              <Text style={styles.lixeira}>🗑️</Text>
+            </Pressable>
           </View>
         )}
       />
